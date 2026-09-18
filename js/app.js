@@ -272,6 +272,205 @@ const app = (() => {
         daysContainer.innerHTML = html;
     }
 
+    // ==========================================================
+    // OPEN-SOURCE LIVE CROWD SURGE & FESTIVAL ENGINE
+    // Works offline & on GitHub Pages with zero cloud dependencies
+    // ==========================================================
+    const FESTIVAL_SURGE_REGISTRY = [
+        { name: "Navratri & Dussehra", cities: ["mysore", "varanasi", "tirupati", "shirdi", "madurai"], start: [10, 1], end: [10, 15], multiplier: 2.5 },
+        { name: "Brahmotsavam", cities: ["tirupati"], start: [9, 20], end: [9, 29], multiplier: 3.5 },
+        { name: "Vaikuntha Ekadashi", cities: ["tirupati"], start: [12, 20], end: [12, 26], multiplier: 4.0 },
+        { name: "Dev Deepawali", cities: ["varanasi"], start: [11, 10], end: [11, 18], multiplier: 3.0 },
+        { name: "Mahashivaratri", cities: ["varanasi", "kedarnath"], start: [2, 25], end: [3, 2], multiplier: 3.5 },
+        { name: "Rath Yatra", cities: ["puri"], start: [6, 20], end: [7, 5], multiplier: 4.5 },
+        { name: "Snana Yatra", cities: ["puri"], start: [6, 1], end: [6, 8], multiplier: 2.5 },
+        { name: "Char Dham Season Opening", cities: ["kedarnath"], start: [5, 1], end: [5, 15], multiplier: 3.0 },
+        { name: "Baisakhi & Gurpurab", cities: ["amritsar"], start: [4, 12], end: [4, 15], multiplier: 3.0 },
+        { name: "Guru Nanak Jayanti", cities: ["amritsar"], start: [11, 15], end: [11, 17], multiplier: 3.5 },
+        { name: "Sunburn Festival", cities: ["goa"], start: [12, 27], end: [12, 31], multiplier: 2.5 },
+        { name: "New Year Rush", cities: ["goa"], start: [12, 28], end: [1, 3], multiplier: 3.0 },
+        { name: "Carnival", cities: ["goa"], start: [2, 15], end: [2, 18], multiplier: 2.0 },
+        { name: "Diwali Week", cities: ["varanasi", "amritsar", "tirupati", "shirdi", "rishikesh"], start: [10, 28], end: [11, 5], multiplier: 2.5 },
+        { name: "Shirdi Sai Baba Punyatithi", cities: ["shirdi"], start: [10, 5], end: [10, 10], multiplier: 3.5 },
+        { name: "Ram Navami", cities: ["shirdi", "varanasi", "bodh gaya"], start: [4, 5], end: [4, 8], multiplier: 2.0 },
+        { name: "Meenakshi Thirukalyanam", cities: ["madurai"], start: [4, 10], end: [4, 20], multiplier: 3.5 },
+        { name: "Buddha Purnima", cities: ["bodh gaya"], start: [5, 20], end: [5, 25], multiplier: 3.0 },
+        { name: "Maha Kumbh / Ardh Kumbh", cities: ["rishikesh", "varanasi"], start: [1, 13], end: [2, 26], multiplier: 5.0 },
+        { name: "International Yoga Day Rush", cities: ["rishikesh"], start: [6, 18], end: [6, 23], multiplier: 2.0 },
+        { name: "Kartik Purnima", cities: ["somnath", "dwarka", "varanasi"], start: [11, 25], end: [11, 28], multiplier: 2.5 },
+        { name: "Janmashtami", cities: ["dwarka", "varanasi", "madurai"], start: [8, 25], end: [8, 28], multiplier: 3.0 }
+    ];
+
+    function computeClientEventIntelligence(destinationName, travelDate) {
+        const destLower = (destinationName || '').toLowerCase().replace('tirupathi', 'tirupati');
+        const dateObj = travelDate ? new Date(travelDate) : new Date();
+        const month = dateObj.getMonth() + 1; // 1-12
+        const day = dateObj.getDate();
+
+        function isDateInRange(m, d, start, end) {
+            const [sm, sd] = start;
+            const [em, ed] = end;
+            if (sm === em) return m === sm && d >= sd && d <= ed;
+            if (sm < em) return (m === sm && d >= sd) || (m === em && d <= ed) || (m > sm && m < em);
+            return (m === sm && d >= sd) || (m === em && d <= ed);
+        }
+
+        const activeFestivals = [];
+        for (const fest of FESTIVAL_SURGE_REGISTRY) {
+            const cityMatch = fest.cities.some(c => destLower.includes(c) || c.includes(destLower));
+            if (cityMatch && isDateInRange(month, day, fest.start, fest.end)) {
+                activeFestivals.push(fest);
+            }
+        }
+
+        const dayOfWeek = dateObj.getDay();
+        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+        let mult = 1.0;
+        if (activeFestivals.length > 0) {
+            mult = Math.max(...activeFestivals.map(f => f.multiplier));
+            if (isWeekend) mult = Math.round(mult * 1.25 * 10) / 10;
+        } else if (isWeekend) {
+            mult = 1.4;
+        }
+
+        let pressure = 'LOW';
+        if (mult >= 2.8) pressure = 'CRITICAL';
+        else if (mult >= 1.8) pressure = 'HIGH';
+        else if (mult >= 1.25) pressure = 'MEDIUM';
+
+        let estDemand = 'Normal Flow';
+        if (pressure === 'CRITICAL') estDemand = `${mult}x Surge`;
+        else if (pressure === 'HIGH') estDemand = `${mult}x Surge`;
+        else if (pressure === 'MEDIUM') estDemand = 'Elevated Flow';
+
+        return {
+            status: 'success',
+            data: {
+                event_name: activeFestivals[0] ? `${activeFestivals[0].name} Surge` : `${destinationName} Live Intelligence`,
+                destination: destinationName,
+                estimated_demand: estDemand,
+                metrics: { crowd_pressure: pressure },
+                surge_data: {
+                    crowd_pressure: pressure,
+                    active_festivals: activeFestivals,
+                    is_weekend: isWeekend,
+                    festival_multiplier: mult
+                }
+            }
+        };
+    }
+
+    function applyCrowdIntelligence(data, destName, dest) {
+        if (!data) return;
+        const surge = data.surge_data || {};
+        const pressure = (data.metrics?.crowd_pressure || surge.crowd_pressure || 'LOW').toUpperCase();
+        const activeFestivals = surge.active_festivals || [];
+        const estDemand = data.estimated_demand || 'Normal';
+        const isWeekend = surge.is_weekend;
+        const mult = surge.festival_multiplier || surge.weekend_multiplier || 1.0;
+
+        const crowdEl = document.getElementById('sanctum-crowd-level');
+        const crowdSuffix = document.getElementById('sanctum-crowd-suffix');
+        const crowdTag = document.getElementById('sanctum-crowd-tag');
+        const crowdDot = document.getElementById('sanctum-crowd-dot');
+        const trafficBadge = document.getElementById('sanctum-traffic-badge');
+        const transitEl = document.getElementById('sanctum-travel-time');
+        const routeProgress = document.getElementById('sanctum-route-progress');
+
+        if (pressure === 'CRITICAL') {
+            if (crowdEl) {
+                crowdEl.innerText = 'Critical';
+                crowdEl.className = 'font-display text-3xl sm:text-4xl font-extrabold text-rose-600';
+            }
+            if (crowdSuffix) crowdSuffix.innerText = 'Congestion (' + estDemand + ')';
+            if (crowdTag) {
+                const festName = activeFestivals[0]?.name || (destName.toLowerCase().includes('tirupati') ? 'Brahmotsavam Surge' : 'Peak Season Footfall');
+                crowdTag.innerText = festName + ' (' + mult + 'x Surge)';
+                crowdTag.className = 'font-label-sm text-xs text-rose-600 font-semibold';
+            }
+            if (crowdDot) crowdDot.className = 'w-2 h-2 rounded-full bg-rose-600 animate-ping';
+            if (trafficBadge) {
+                trafficBadge.innerText = 'Heavy Rush';
+                trafficBadge.className = 'px-2 py-0.5 rounded text-[10px] bg-rose-100 text-rose-800 font-bold';
+            }
+            if (transitEl) {
+                transitEl.innerText = activeFestivals[0] ? (activeFestivals[0].name + ' Priority Transit Corridor') : (dest?.transitText || `${destName} Main Corridor`);
+            }
+            if (routeProgress) {
+                routeProgress.style.width = '95%';
+                routeProgress.className = 'h-full bg-rose-500 rounded-full transition-all duration-500';
+            }
+        } else if (pressure === 'HIGH') {
+            if (crowdEl) {
+                crowdEl.innerText = 'High';
+                crowdEl.className = 'font-display text-3xl sm:text-4xl font-extrabold text-amber-600';
+            }
+            if (crowdSuffix) crowdSuffix.innerText = 'Congestion (' + estDemand + ')';
+            if (crowdTag) {
+                crowdTag.innerText = activeFestivals[0] ? (activeFestivals[0].name + ' Active (' + mult + 'x Surge)') : (isWeekend ? ('Weekend Rush (' + mult + 'x)') : 'Elevated Footfall');
+                crowdTag.className = 'font-label-sm text-xs text-amber-600 font-semibold';
+            }
+            if (crowdDot) crowdDot.className = 'w-2 h-2 rounded-full bg-amber-500 animate-pulse';
+            if (trafficBadge) {
+                trafficBadge.innerText = 'Dense Traffic';
+                trafficBadge.className = 'px-2 py-0.5 rounded text-[10px] bg-amber-100 text-amber-800 font-bold';
+            }
+            if (transitEl) {
+                transitEl.innerText = activeFestivals[0] ? (destName + ' Special Shuttle Corridor') : 'Express Bypass & Rapid Transit';
+            }
+            if (routeProgress) {
+                routeProgress.style.width = '75%';
+                routeProgress.className = 'h-full bg-amber-500 rounded-full transition-all duration-500';
+            }
+        } else if (pressure === 'MEDIUM') {
+            if (crowdEl) {
+                crowdEl.innerText = 'Moderate';
+                crowdEl.className = 'font-display text-3xl sm:text-4xl font-extrabold text-secondary';
+            }
+            if (crowdSuffix) crowdSuffix.innerText = 'Congestion';
+            if (crowdTag) {
+                crowdTag.innerText = isWeekend ? ('Weekend Steady (' + mult + 'x)') : 'Balanced Season';
+                crowdTag.className = 'font-label-sm text-xs text-secondary font-semibold';
+            }
+            if (crowdDot) crowdDot.className = 'w-2 h-2 rounded-full bg-secondary animate-pulse';
+            if (trafficBadge) {
+                trafficBadge.innerText = 'Steady Traffic';
+                trafficBadge.className = 'px-2 py-0.5 rounded text-[10px] bg-secondary-container/50 text-on-secondary-container font-bold';
+            }
+            if (transitEl) {
+                transitEl.innerText = dest?.transitText || 'Scenic Route & Shuttles';
+            }
+            if (routeProgress) {
+                routeProgress.style.width = '60%';
+                routeProgress.className = 'h-full bg-secondary rounded-full transition-all duration-500';
+            }
+        } else {
+            // LOW
+            if (crowdEl) {
+                crowdEl.innerText = 'Low';
+                crowdEl.className = 'font-display text-3xl sm:text-4xl font-extrabold text-emerald-700';
+            }
+            if (crowdSuffix) crowdSuffix.innerText = 'Congestion';
+            if (crowdTag) {
+                crowdTag.innerText = 'Recommended Season';
+                crowdTag.className = 'font-label-sm text-xs text-emerald-700 font-semibold';
+            }
+            if (crowdDot) crowdDot.className = 'w-2 h-2 rounded-full bg-emerald-600 animate-pulse';
+            if (trafficBadge) {
+                trafficBadge.innerText = 'Smooth Traffic';
+                trafficBadge.className = 'px-2 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-800 font-bold';
+            }
+            if (transitEl) {
+                transitEl.innerText = dest?.transitText || 'Scenic Express Corridor';
+            }
+            if (routeProgress) {
+                routeProgress.style.width = '35%';
+                routeProgress.className = 'h-full bg-emerald-600 rounded-full transition-all duration-500';
+            }
+        }
+    }
+
     function updateTelemetryForDates() {
         let startDate, endDate, tripDays, destName, dest;
 
@@ -361,122 +560,21 @@ const app = (() => {
             if (headerPacingLabelEl) headerPacingLabelEl.innerText = label;
         }
 
-        // 2. Real-Time Event Intelligence & Live Crowd Pressure
+        // 2. Real-Time Event Intelligence & Live Crowd Pressure (Open-Source Client Engine + Backend Sync)
+        const localSurge = computeClientEventIntelligence(destName, startDate);
+        applyCrowdIntelligence(localSurge.data, destName, dest);
+
         const travelDateStr = formatDateInput(startDate);
         fetch('http://localhost:8000/api/admin/event-intelligence?destination=' + encodeURIComponent(destName) + '&travel_date=' + travelDateStr)
             .then(r => r.json())
             .then(res => {
                 if (res && res.status === 'success' && res.data) {
-                    const data = res.data;
-                    const surge = data.surge_data || {};
-                    const pressure = (data.metrics?.crowd_pressure || surge.crowd_pressure || 'LOW').toUpperCase();
-                    const activeFestivals = surge.active_festivals || [];
-                    const estDemand = data.estimated_demand || 'Normal';
-                    const isWeekend = surge.is_weekend;
-                    const mult = surge.festival_multiplier || surge.weekend_multiplier || 1.0;
-
-                    const crowdEl = document.getElementById('sanctum-crowd-level');
-                    const crowdSuffix = document.getElementById('sanctum-crowd-suffix');
-                    const crowdTag = document.getElementById('sanctum-crowd-tag');
-                    const crowdDot = document.getElementById('sanctum-crowd-dot');
-                    const trafficBadge = document.getElementById('sanctum-traffic-badge');
-                    const transitEl = document.getElementById('sanctum-travel-time');
-                    const routeProgress = document.getElementById('sanctum-route-progress');
-
-                    if (pressure === 'CRITICAL') {
-                        if (crowdEl) {
-                            crowdEl.innerText = 'Critical';
-                            crowdEl.className = 'font-display text-3xl sm:text-4xl font-extrabold text-rose-600';
-                        }
-                        if (crowdSuffix) crowdSuffix.innerText = 'Congestion (' + estDemand + ')';
-                        if (crowdTag) {
-                            const festName = activeFestivals[0]?.name || (destName.toLowerCase().includes('tirupati') ? 'Brahmotsavam Surge' : 'Peak Season Footfall');
-                            crowdTag.innerText = festName + ' (' + mult + 'x Surge)';
-                            crowdTag.className = 'font-label-sm text-xs text-rose-600 font-semibold';
-                        }
-                        if (crowdDot) crowdDot.className = 'w-2 h-2 rounded-full bg-rose-600 animate-ping';
-                        if (trafficBadge) {
-                            trafficBadge.innerText = 'Heavy Rush';
-                            trafficBadge.className = 'px-2 py-0.5 rounded text-[10px] bg-rose-100 text-rose-800 font-bold';
-                        }
-                        if (transitEl) {
-                            transitEl.innerText = activeFestivals[0] ? (activeFestivals[0].name + ' Priority Transit Corridor') : (dest?.transitText || `${destName} Main Corridor`);
-                        }
-                        if (routeProgress) {
-                            routeProgress.style.width = '95%';
-                            routeProgress.className = 'h-full bg-rose-500 rounded-full transition-all duration-500';
-                        }
-                    } else if (pressure === 'HIGH') {
-                        if (crowdEl) {
-                            crowdEl.innerText = 'High';
-                            crowdEl.className = 'font-display text-3xl sm:text-4xl font-extrabold text-amber-600';
-                        }
-                        if (crowdSuffix) crowdSuffix.innerText = 'Congestion (' + estDemand + ')';
-                        if (crowdTag) {
-                            crowdTag.innerText = activeFestivals[0] ? (activeFestivals[0].name + ' Active') : (isWeekend ? ('Weekend Rush (' + mult + 'x)') : 'Elevated Footfall');
-                            crowdTag.className = 'font-label-sm text-xs text-amber-600 font-semibold';
-                        }
-                        if (crowdDot) crowdDot.className = 'w-2 h-2 rounded-full bg-amber-500 animate-pulse';
-                        if (trafficBadge) {
-                            trafficBadge.innerText = 'Dense Traffic';
-                            trafficBadge.className = 'px-2 py-0.5 rounded text-[10px] bg-amber-100 text-amber-800 font-bold';
-                        }
-                        if (transitEl) {
-                            transitEl.innerText = 'Express Bypass & Rapid Transit';
-                        }
-                        if (routeProgress) {
-                            routeProgress.style.width = '75%';
-                            routeProgress.className = 'h-full bg-amber-500 rounded-full transition-all duration-500';
-                        }
-                    } else if (pressure === 'MEDIUM') {
-                        if (crowdEl) {
-                            crowdEl.innerText = 'Moderate';
-                            crowdEl.className = 'font-display text-3xl sm:text-4xl font-extrabold text-secondary';
-                        }
-                        if (crowdSuffix) crowdSuffix.innerText = 'Congestion';
-                        if (crowdTag) {
-                            crowdTag.innerText = isWeekend ? ('Weekend Steady (' + mult + 'x)') : 'Balanced Season';
-                            crowdTag.className = 'font-label-sm text-xs text-secondary font-semibold';
-                        }
-                        if (crowdDot) crowdDot.className = 'w-2 h-2 rounded-full bg-secondary animate-pulse';
-                        if (trafficBadge) {
-                            trafficBadge.innerText = 'Steady Traffic';
-                            trafficBadge.className = 'px-2 py-0.5 rounded text-[10px] bg-secondary-container/50 text-on-secondary-container font-bold';
-                        }
-                        if (transitEl) {
-                            transitEl.innerText = dest?.transitText || 'Scenic Route & Shuttles';
-                        }
-                        if (routeProgress) {
-                            routeProgress.style.width = '60%';
-                            routeProgress.className = 'h-full bg-secondary rounded-full transition-all duration-500';
-                        }
-                    } else {
-                        // LOW
-                        if (crowdEl) {
-                            crowdEl.innerText = 'Low';
-                            crowdEl.className = 'font-display text-3xl sm:text-4xl font-extrabold text-emerald-700';
-                        }
-                        if (crowdSuffix) crowdSuffix.innerText = 'Congestion';
-                        if (crowdTag) {
-                            crowdTag.innerText = 'Recommended Season';
-                            crowdTag.className = 'font-label-sm text-xs text-emerald-700 font-semibold';
-                        }
-                        if (crowdDot) crowdDot.className = 'w-2 h-2 rounded-full bg-emerald-600 animate-pulse';
-                        if (trafficBadge) {
-                            trafficBadge.innerText = 'Smooth Traffic';
-                            trafficBadge.className = 'px-2 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-800 font-bold';
-                        }
-                        if (transitEl) {
-                            transitEl.innerText = dest?.transitText || 'Scenic Express Corridor';
-                        }
-                        if (routeProgress) {
-                            routeProgress.style.width = '35%';
-                            routeProgress.className = 'h-full bg-emerald-600 rounded-full transition-all duration-500';
-                        }
-                    }
+                    applyCrowdIntelligence(res.data, destName, dest);
                 }
             })
-            .catch(() => {});
+            .catch(() => {
+                // Client-side intelligence already applied smoothly above
+            });
 
         // 3. Weather Outlook for Selected Date & Month
         const weatherEl = document.getElementById('sanctum-weather');
@@ -2075,6 +2173,21 @@ const app = (() => {
                     dayItems = dayItems.filter((item, idx) => idx !== 3 || dayItems.length <= 3);
                 }
 
+                // If Day 1, dynamically bind the confirmed stay from curated hotels catalog
+                if (d === 0 && hotels && hotels.length > 0) {
+                    const primaryHotel = hotels[0];
+                    const checkin = dayItems.find(it => it.type === 'accommodation' || (it.title && it.title.toLowerCase().includes('check-in')));
+                    if (checkin) {
+                        checkin.title = 'Arrival & Check-in at ' + primaryHotel.name;
+                        checkin.location = primaryHotel.address || checkin.location;
+                        if (primaryHotel.photo) checkin.photo = primaryHotel.photo;
+                        checkin.type = 'accommodation';
+                        checkin.rating = primaryHotel.rating || checkin.rating;
+                        checkin.source = 'Confirmed Curated Stay';
+                        checkin.humanTip = 'Deposit luggage and refresh at ' + primaryHotel.name + ' before commencing your tour.';
+                    }
+                }
+
                 // Compute real pairwise transit distance and durations
                 let totalKm = 0;
                 let totalTransitMin = 0;
@@ -2139,19 +2252,20 @@ const app = (() => {
 
             // 1. Morning Arrival / Kickoff Anchor
             if (d === 0) {
+                const primaryHotel = (hotels && hotels.length > 0) ? hotels[0] : null;
                 items.push({
                     time: '09:00 AM',
-                    title: `Arrival & Base Check-in in ${trip.destination.name}`,
-                    type: 'transport',
-                    location: `${trip.destination.name} Transit Gateway`,
+                    title: primaryHotel ? `Arrival & Check-in at ${primaryHotel.name}` : `Arrival & Base Check-in in ${trip.destination.name}`,
+                    type: 'accommodation',
+                    location: primaryHotel ? primaryHotel.address : `${trip.destination.name} Transit Gateway`,
                     cost: 0,
                     duration: '1 hr',
-                    rating: 4.8,
-                    source: 'Expedition Check-in',
-                    photo: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=500&q=80',
-                    lat: centerLat,
-                    lng: centerLng,
-                    humanTip: 'Settle into base accommodations before commencing day trail.'
+                    rating: (primaryHotel && primaryHotel.rating) || 4.8,
+                    source: primaryHotel ? 'Confirmed Curated Stay' : 'Expedition Check-in',
+                    photo: (primaryHotel && primaryHotel.photo) || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=500&q=80',
+                    lat: (primaryHotel && primaryHotel.lat) || centerLat,
+                    lng: (primaryHotel && primaryHotel.lng) || centerLng,
+                    humanTip: primaryHotel ? `Deposit luggage and refresh at ${primaryHotel.name} before starting exploration.` : 'Settle into base accommodations before commencing day trail.'
                 });
             }
 
@@ -3117,13 +3231,34 @@ const app = (() => {
         
         // Update the itinerary item for hotel if it exists
         if (currentTrip && currentTrip.itinerary && currentTrip.itinerary[0]) {
-            const hotelItem = currentTrip.itinerary[0].items.find(i => i.type === 'accommodation');
-            if (hotelItem) {
-                hotelItem.title = 'Confirmed Stay at ' + truncate(activeBookingHotel.name, 25);
+            const hotelItem = currentTrip.itinerary[0].items.find(i => 
+                i.type === 'accommodation' || 
+                (i.title && (i.title.toLowerCase().includes('check-in') || i.title.toLowerCase().includes('stay')))
+            );
+            if (hotelItem && activeBookingHotel) {
+                hotelItem.title = 'Confirmed Stay at ' + truncate(activeBookingHotel.name, 35);
+                hotelItem.location = activeBookingHotel.address || hotelItem.location;
+                if (activeBookingHotel.photo) hotelItem.photo = activeBookingHotel.photo;
+                hotelItem.type = 'accommodation';
                 hotelItem.source = 'Booking: ' + receipt;
+                hotelItem.rating = activeBookingHotel.rating || hotelItem.rating;
+                hotelItem.humanTip = 'Deposit luggage and enjoy your reserved stay at ' + activeBookingHotel.name + '.';
             }
             renderItineraryTabs(currentTrip.itinerary);
-            renderItineraryDay(0);
+            renderItineraryDay(currentActiveDayIndex || 0);
+        }
+
+        // Update the Accommodation Dossier widget on the dashboard
+        if (activeBookingHotel) {
+            const nameEl = document.getElementById('stay-dossier-name');
+            if (nameEl) nameEl.textContent = activeBookingHotel.name;
+            const roomEl = document.getElementById('stay-dossier-room');
+            if (roomEl) roomEl.textContent = (activeBookingHotel.rating ? (activeBookingHotel.rating + '★ ') : '') + 'Curated Boutique Stay · Booking ' + receipt;
+            const nights = Math.max(1, (currentTrip?.numDays || 4) - 1);
+            const baseRate = Math.round((currentTrip?.budgetBreakdown?.accommodation || 12000) / (currentTrip?.numDays || 4));
+            const total = Math.round(baseRate * (selectedRoomMultiplier || 1) * nights * 1.18);
+            const priceEl = document.getElementById('stay-dossier-price');
+            if (priceEl) priceEl.textContent = formatCurrency(total) + ' Total';
         }
         
         document.getElementById('booking-step-1').classList.add('hidden');
