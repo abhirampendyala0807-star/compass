@@ -1128,6 +1128,26 @@ const app = (() => {
             hotels = await TravelAPI.searchPlaces(
                 'hotels in ' + dest.name, loc, 'lodging'
             );
+            if (hotels && hotels.length > 0) {
+                const dailyStayBudget = (currentTrip && currentTrip.budgetBreakdown && currentTrip.numDays)
+                    ? (currentTrip.budgetBreakdown.accommodation / currentTrip.numDays)
+                    : 2500;
+
+                // Match hotel tier to user's spending power:
+                // Tier 1 (Budget < ₹2,200/night): TTD Srinivasam, Pilgrim guesthouses
+                // Tier 2 (Standard ₹2,200-₹5,000/night): Hotel Bliss, Fortune Select
+                // Tier 3 (Luxury > ₹5,000/night): Taj Tirupati
+                let targetTier = 2;
+                if (dailyStayBudget < 2200) targetTier = 1;
+                else if (dailyStayBudget > 5500) targetTier = 3;
+
+                hotels.sort((a, b) => {
+                    const diffA = Math.abs((a.priceLevel || 2) - targetTier);
+                    const diffB = Math.abs((b.priceLevel || 2) - targetTier);
+                    if (diffA !== diffB) return diffA - diffB;
+                    return (b.rating || 4.5) - (a.rating || 4.5);
+                });
+            }
         } catch (e) { hotels = []; }
         const stayName = document.getElementById('loading-stay-name');
         if (stayName) {

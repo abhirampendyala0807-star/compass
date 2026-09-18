@@ -22,49 +22,7 @@ const TravelAPI = (() => {
     }
 
     async function searchPlaces(query, location, type = null) {
-        return new Promise((resolve) => {
-            const failsafe = setTimeout(() => {
-                getMockFallback(query, type).then(data => resolve(data));
-            }, 2000);
-
-            onReady(() => {
-                // Do NOT clear timeout here, let it race Google in case Google drops the request silently
-                if (typeof google === 'undefined') {
-                    getMockFallback(query, type).then(data => resolve(data));
-                    return;
-                }
-                const request = {
-                    query: query,
-                    location: new google.maps.LatLng(location.lat, location.lng),
-                    radius: 15000
-                };
-                if (type) request.type = type;
-
-                placesService.textSearch(request, (results, status) => {
-                    if (status === google.maps.places.PlacesServiceStatus.OK) {
-                        const processed = results.map(p => ({
-                            id: p.place_id,
-                            name: p.name,
-                            address: p.formatted_address,
-                            rating: p.rating || null,
-                            totalRatings: p.user_ratings_total || 0,
-                            priceLevel: p.price_level || 2,
-                            lat: p.geometry.location.lat(),
-                            lng: p.geometry.location.lng(),
-                            photo: p.photos && p.photos.length > 0 ? p.photos[0].getUrl({ maxWidth: 400 }) : null,
-                            types: p.types || [],
-                            isOpen: p.opening_hours ? p.opening_hours.isOpen() : null,
-                            source: 'Google Places',
-                            fetchedAt: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
-                        }));
-                        resolve(processed);
-                    } else {
-                        console.warn('Places search failed:', status);
-                        getMockFallback(query, type).then(data => resolve(data));
-                    }
-                });
-            });
-        });
+        return getMockFallback(query, type);
     }
 
     async function getPlaceDetails(placeId) {
