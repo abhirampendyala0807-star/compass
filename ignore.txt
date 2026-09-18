@@ -1,0 +1,10 @@
+# Security: Ignore environment variables and secrets
+.env
+js/secrets.js
+__pycache__/
+*.pyc
+.DS_Store
+
+# Backups and Databases
+*.bak
+*.db
